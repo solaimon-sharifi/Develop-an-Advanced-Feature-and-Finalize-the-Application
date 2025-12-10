@@ -89,22 +89,12 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Resolve Docker image name
-        id: dockerImage
-        run: |
-          owner=${{ secrets.DOCKERHUB_USERNAME }}
-          if [ -z "$owner" ]; then
-            owner=${GITHUB_REPOSITORY_OWNER}
-          fi
-          image="$owner/module14_is601"
-          echo "image=$image" >> "$GITHUB_OUTPUT"
-
       - uses: docker/build-push-action@v5
         with:
           push: true
           tags: |
-            ${{ steps.dockerImage.outputs.image }}:latest
-            ${{ steps.dockerImage.outputs.image }}:${{ github.sha }}
+            solaimon/project-3:latest
+            solaimon/project-3:${{ github.sha }}
           platforms: linux/amd64,linux/arm64
-          cache-from: type=registry,ref=${{ steps.dockerImage.outputs.image }}:cache
+          cache-from: type=registry,ref=solaimon/project-3:cache
           cache-to: type=inline,mode=max
