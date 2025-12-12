@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta
 from typing import Dict, Optional
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -13,6 +14,7 @@ from .models import User
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
+html_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login", auto_error=False)
 
 
 def get_password_hash(password: str) -> str:
@@ -79,10 +81,36 @@ def get_current_user(
     return user
 
 
-def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
-    if not current_user.is_active:
+def _ensure_active_user(user: User) -> User:
+    if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Inactive user",
         )
-    return current_user
+    return user
+
+
+def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
+    return _ensure_active_user(current_user)
+
+
+def get_current_user_for_templates(
+    request: Request,
+    token: str | None = Depends(html_oauth2_scheme),
+    db: Session = Depends(get_db),
+) -> User:
+    if token is None:
+        raise HTTPException(
+            status_code=status.HTTP_303_SEE_OTHER,
+            detail="Redirecting to login",
+            headers={"Location": str(request.url_for("login_page"))},
+        )
+    try:
+        user = get_current_user(token=token, db=db)
+        return _ensure_active_user(user)
+    except HTTPException:
+        raise HTTPException(
+            status_code=status.HTTP_303_SEE_OTHER,
+            detail="Redirecting to login",
+            headers={"Location": str(request.url_for("login_page"))},
+        )

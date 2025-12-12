@@ -1,11 +1,12 @@
 from contextlib import asynccontextmanager
 from datetime import datetime
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from .auth import get_current_user_for_templates
 from .core.config import get_settings
 from .database import Base, engine
 from .routes.matches import router as matches_router
@@ -49,7 +50,10 @@ def register(request: Request):
 
 
 @app.get("/dashboard/app", response_class=HTMLResponse, name="dashboard_view")
-def dashboard_view(request: Request):
+def dashboard_view(
+    request: Request,
+    current_user=Depends(get_current_user_for_templates),
+):
     return templates.TemplateResponse("dashboard.html", {"request": request})
 
 

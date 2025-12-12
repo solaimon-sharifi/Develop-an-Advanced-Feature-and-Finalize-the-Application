@@ -13,6 +13,13 @@ def authenticate(client, username: str):
     return response.json()
 
 
+def assert_redirects_to_login(response):
+    assert response.status_code in (302, 303)
+    location = response.headers.get("location")
+    assert location is not None
+    assert location.endswith("/login")
+
+
 def test_register_and_login_flow(client):
     response = client.post("/register", json=create_user_payload("testcoach"))
     assert response.status_code == 201
@@ -28,6 +35,21 @@ def test_register_and_login_flow(client):
     assert payload["username"] == "testcoach"
     assert payload["user_id"] > 0
     assert payload["token_type"] == "bearer"
+
+
+def test_dashboard_html_redirects_without_auth(client):
+    response = client.get("/dashboard/app", follow_redirects=False)
+    assert_redirects_to_login(response)
+
+
+def test_valorant_dashboard_html_redirects_without_auth(client):
+    response = client.get("/valorant-dashboard", follow_redirects=False)
+    assert_redirects_to_login(response)
+
+
+def test_sessions_api_requires_auth(client):
+    response = client.get("/sessions")
+    assert response.status_code == 401
 
 
 def test_dashboard_requires_jwt(client):
@@ -85,11 +107,6 @@ def test_dashboard_returns_matches_and_strategies(client):
     assert payload["matches"][0]["map"] == "Bind"
     assert payload["strategies"][0]["title"] == "Site Control"
 
-
-def test_valorant_dashboard_route_renders(client):
-    response = client.get("/valorant-dashboard")
-    assert response.status_code == 200
-    assert "Valorant Tactical Coach Dashboard" in response.text
 
 
 def test_create_and_list_sessions(client):
