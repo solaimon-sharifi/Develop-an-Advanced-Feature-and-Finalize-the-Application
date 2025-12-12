@@ -1,60 +1,33 @@
 version: "3.9"
 
 services:
-  web:
-    image: solaimon/project-3:latest
-    ports:
-      - "80:8000"
+  valorant-app:
+    image: solaimon/valo-project-1:latest
     restart: unless-stopped
+    env_file:
+      - .env.production
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "9000:8000"
     depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
-      JWT_REFRESH_SECRET_KEY: ${JWT_REFRESH_SECRET_KEY}
-      REDIS_URL: ${REDIS_URL}
-    networks:
-      - app-network
+      - db
 
   db:
-    image: postgres:17
+    image: postgres:15
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: fastapi_db
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+      POSTGRES_DB: valo_db
+      POSTGRES_USER: valo_user
+      POSTGRES_PASSWORD: valo_pass
+    ports:
+      - "5432:5432"
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres -d fastapi_db" ]
+      test: ["CMD-SHELL", "pg_isready -U valo_user -d valo_db"]
       interval: 10s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
-    networks:
-      - app-network
-
-  redis:
-    image: redis:7
-    restart: unless-stopped
     volumes:
-      - redis_data:/data
-    healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - app-network
+      - postgres-data:/var/lib/postgresql/data
 
 volumes:
-  postgres_data:
-    driver: local
-  redis_data:
-    driver: local
-
-networks:
-  app-network:
-    driver: bridge
+  postgres-data:

@@ -1,8 +1,9 @@
-from app.database import engine
-from app.models.user import Base
+from .database import Base, engine
+
 
 def init_db():
     Base.metadata.create_all(bind=engine)
+
 
 def drop_db():
     Base.metadata.drop_all(bind=engine)

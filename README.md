@@ -1,228 +1,81 @@
-# Calculator BREAD App with Exponent Support
+# Valorant Coach
 
-This FastAPI + SQLAlchemy + Playwright application provides a full BREAD (Browse, Read, Edit, Add, Delete) workflow for mathematical calculations tied to authenticated users. The latest enhancement introduces an **Exponent (Power)** operation so you can compute `base^exponent`, store it alongside addition/subtraction/multiplication/division records, and view the result immediately in the dashboard.
+This FastAPI + SQLAlchemy + JS frontend experience bridges Valorant-inspired coaching tools with a secure JWT backend and SQLite/Postgres persistence depending on the environment. Log matches, track strategies, and push squadwork through a polished dashboard instead of the old calculator workflows.
 
-## Key Features
+## Environment & Local Run
 
-- JWT-based authentication with secure password hashing.
-- Polymorphic SQLAlchemy calculation models for each operation type.
-- Exponent (Power) calculation that accepts two numeric operands (base + exponent) and persists the result with the other history entries.
-- Playwright-powered UI tests that log in, perform calculations, and verify validation handling.
-
-## Requirements
-
-- Python 3.12 (3.10+ compatible, the project ships with a `venv`)
-- PostgreSQL 13+ (local or via Docker)
-- Playwright browsers (`python -m playwright install`)
-- Docker / Docker Compose for containerized execution
-
-## Local Setup
-
-1. Create and activate a virtual environment:
-
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
-   ```
-
-2. Upgrade pip, install dependencies, and install Playwright browsers:
-
-   ```bash
-   pip install --upgrade pip
-   pip install -r requirements.txt
-   python -m playwright install
-   ```
-
-3. Configure environment variables or rely on the defaults exposed in `app/core/config.py` (`DATABASE_URL`, `JWT_SECRET_KEY`, `JWT_REFRESH_SECRET_KEY`, `REDIS_URL`, etc.). If you prefer a `.env` file, create one and export it before running the app.
-
-## Running the App Locally
-
-1. Ensure PostgreSQL is running (either locally or via Docker).
-2. Initialize the database schema and start the FastAPI server:
-
-   ```bash
-   python -m app.database_init
-   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-   ```
-
-3. Open `http://localhost:8000` in your browser, register/log in, select **Exponent (Power)** from the dropdown, supply a base/exponent pair, and submit. The result appears immediately in the calculation history along with the metadata for each operation.
-
-4. Use the API route `POST /calculations` (protected) or the dedicated `/calculate/exponent` route (if you add a separate TypeScript handler) to interact programmatically.
-
-## Running Tests
-
-All suites run through a single command:
+- The application reads `DATABASE_URL`, `JWT_SECRET_KEY`, and `JWT_REFRESH_SECRET_KEY` from `app/core/config.py` and fails early if any values are missing, so exporting them before startup is mandatory. Use the same secrets in Docker Compose via `.env.production` or your own env file for local runs.
+- For local development you only need SQLite + the static secrets shown below. Run the app with:
 
 ```bash
-python3 -m pytest
+DATABASE_URL=sqlite:///./app.db \
+JWT_SECRET_KEY=dev-secret \
+JWT_REFRESH_SECRET_KEY=dev-refresh \
+uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-This launches the unit, integration, and Playwright E2E tests (it spins up the FastAPI server + Playwright browser as needed). Make sure Playwright browsers are installed beforehand. If you want selective runs, the tests are organized into `tests/unit/`, `tests/integration/`, and `tests/e2e/`.
+Keep the terminal open while the server spins up. The landing page, login, registration, and dashboard templates (all under `templates/`) hit the auth and match routes described in `app/routes/` directly.
 
-## Docker
+## Containerization
 
-### Build
+- The Dockerfile is built on `python:3.12-slim`, installs the dependencies listed in `requirements.txt`, exposes port **8000** inside the container, and launches `uvicorn app.main:app --host 0.0.0.0 --port 8000` so Compose can route traffic to it on port 9000.
+- Compose uses the published image `solaimon/valo-project-1:latest` along with a Postgres 15 service. The app service loads secrets from `.env.production`, depends on `db`, and forwards host port 9000 to the container port 8000 used by Uvicorn.
+- The Postgres service is configured with the matching database/user/password expected by the app (`valo_db`, `valo_user`, `valo_pass`) and stores data in the named volume `postgres-data` so your match/strategy history survives restarts.
+
+### Sample `.env.production`
+
+Create this file (outside of version control) before running Compose so the app and tests share the same credentials:
+
+```dotenv
+DATABASE_URL=postgresql://valo_user:valo_pass@db:5432/valo_db
+JWT_SECRET_KEY=replace-with-secure-secret
+JWT_REFRESH_SECRET_KEY=replace-with-refresh-secret
+```
+
+## Tests & CI
+
+- Run every suite locally or in CI with the same environment variables the tests currently expect:
 
 ```bash
-docker build -t test-calculator .
+DATABASE_URL=sqlite:///./test.db \
+JWT_SECRET_KEY=test \
+JWT_REFRESH_SECRET_KEY=test \
+python -m pytest
 ```
 
-### Run
+- This command keeps the in-memory SQLite database, the JWT secrets, and the FastAPI app aligned with the newer Valorant architecture, so the unit/integration suite and coverage tools all share the same context.
+
+## DigitalOcean Deployment
+
+Run these commands on your DigitalOcean droplet so the Valorant Coach stack lives under `/opt/valo-project-1` and exposes port 9000 (while Project 14 remains on port 8000):
 
 ```bash
-docker run --rm -p 8000:8000 \
-  -e DATABASE_URL="postgresql://postgres:postgres@db-host:5432/fastapi_db" \
-  -e JWT_SECRET_KEY="your-secure-key" \
-  -e JWT_REFRESH_SECRET_KEY="your-refresh-key" \
-  -e REDIS_URL="redis://redis-host:6379/0" \
-  test-calculator
+sudo mkdir -p /opt/valo-project-1
+cd /opt/valo-project-1
+if [ -d .git ]; then
+  git fetch origin
+  git reset --hard origin/main
+  git pull origin main
+else
+  git clone https://github.com/solaimon-sharifi/Develop-an-Advanced-Feature-and-Finalize-the-Application.git .
+fi
 ```
 
-Replace `db-host`/`redis-host` with the appropriate PostgreSQL and Redis hosts (Docker service names, `localhost`, etc.), and set JWT secrets to production-safe values. Once the container is running, verify it by curling `http://localhost:8000/health` or opening `http://localhost:8000/dashboard` in the browser.
-
-Alternatively, lift the full stack with Docker Compose (`web`, `db`, `pgadmin`), which wires up `postgres:17` and exposes the calculator at `http://localhost:8000` and pgAdmin at `http://localhost:5050` (use `admin@example.com` / `admin`).
-
-## Docker Hub Image
-
-The pipeline publishes `solaimon/module14_is601` (latest and SHA-tagged) to Docker Hub. Browse the pushed image here:
-
-https://hub.docker.com/r/solaimon/module14_is601
-
-## CI/CD
-
-`.github/workflows/test.yml` now:
-
-1. Checks out the code and sets up Python 3.10.
-2. Installs dependencies, Playwright, and runs `python3 -m pytest` with coverage + JUnit output.
-3. Builds an intermediate Docker image and scans it with Trivy (fails on critical/high findings).
-4. Logs in to Docker Hub and pushes the image as `solaimon/module14_is601:latest` and `solaimon/module14_is601:${{ github.sha }}` once tests/security scan pass.
-
-Look for log lines like `Login Succeeded` and `pushed image solaimon/module14_is601:latest` to confirm success.
-
-## Reflection
-
-See `REFLECTION.md` for a recap of what was implemented, obstacles encountered, how testing was performed, and how CI/CD/deployment currently works.# Calculator BREAD App
-
-FastAPI + SQLAlchemy + Playwright starter for the Module 14 calculator assignment. Users can register, authenticate, and perform full BREAD (Browse / Read / Edit / Add / Delete) calculations that stay scoped to their account.
-
-The latest feature adds an **Exponentiation** (power) operation so users can calculate `base ^ exponent`, see the result immediately in the dashboard refresh, and persist it alongside addition, subtraction, multiplication, and division records.
-
-## Requirements
-
-- Python 3.10+ (tested with 3.10.13)
-- PostgreSQL (local or Docker)
-- [Playwright](https://playwright.dev/python/docs/intro) for the UI tests
-- Docker / Docker Compose for containerized runs
-
-## Local Setup
-
-1. Create and activate the project virtual environment:
+Create or overwrite the production env file with secure secrets before running the stack (replace the placeholders):
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
+cat <<'EOF' > .env.production
+DATABASE_URL=postgresql://valo_user:valo_pass@db:5432/valo_db
+JWT_SECRET_KEY=<your-production-access-secret>
+JWT_REFRESH_SECRET_KEY=<your-production-refresh-secret>
+EOF
 ```
 
-2. Upgrade pip and install the pinned dependencies:
+Then pull the latest image and bring the services up on port 9000 (Project 14 continues to use 8000 nearby):
 
 ```bash
-pip install --upgrade pip
-pip install -r requirements.txt
-playwright install
+docker compose pull
+docker compose up -d
 ```
 
-3. Keep the virtual environment active whenever you work in this repo. You can also prefix tools with `.venv/bin/` (e.g., `.venv/bin/pytest`) if you forget to activate; this guarantees the same dependency set without relying on the system Python.
-
-4. Copy `.env.example` (if present) or export the required environment variables such as `DATABASE_URL`, `JWT_SECRET_KEY`, etc. Defaults in `app/core/config.py` point at `postgresql://postgres:postgres@localhost:5432/fastapi_db`.
-
-## Running the App
-
-### Local Run
-
-Make sure Postgres is running (local or Docker). Grow the schema and start the dev server with:
-
-```bash
-python -m app.database_init
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-Head to `http://localhost:8000`, log in, pick the new **Power** operation, supply a base/exponent pair, and watch it appear in your calculation history alongside the other BREAD operations.
-
-### Containerized Run
-
-You can also run the app inside a Docker container:
-
-```bash
-docker build -t solaimon/module14_is601:latest .
-docker run --rm -p 8000:8000 solaimon/module14_is601:latest
-```
-
-Or boot everything with Compose (web + Postgres + pgAdmin):
-
-```bash
-docker-compose up --build
-```
-
-The Compose stack exposes the calculator at `http://localhost:8000` and pgAdmin at `http://localhost:5050` (admin@example.com / admin). The power operation is available in the same dashboard form.
-
-You can automate a full rebuild and log inspection with the helper script:
-
-```bash
-chmod +x scripts/docker_rebuild_logs.sh
-scripts/docker_rebuild_logs.sh
-```
-
-## Running Tests Locally
-
-```bash
-source .venv/bin/activate
-pytest tests/unit/
-pytest tests/integration/
-pytest tests/e2e/
-```
-
-Playwright-based E2E tests exercise login + BREAD flows through the UI. The `tests/conftest.py` fixture boots the FastAPI server and a Playwright browser session automatically.
-The Playwright suite now covers the new Power operation, so remember to run `playwright install` before hitting `tests/e2e/` if you have not installed the browsers yet.
-
-## Docker
-
-Build the image and run a container:
-
-```bash
-docker build -t solaimon/module14_is601:latest .
-docker run --rm -p 8000:8000 solaimon/module14_is601:latest
-```
-
-Or use Docker Compose to run the web app alongside PostgreSQL and pgAdmin:
-
-```bash
-docker-compose up --build
-```
-
-The Compose file exposes the calculator at `http://localhost:8000` and pgAdmin at `http://localhost:5050` (admin@example.com / admin).
-
-You can automate a full rebuild and log check with the supplied helper script:
-
-```bash
-chmod +x scripts/docker_rebuild_logs.sh
-scripts/docker_rebuild_logs.sh
-```
-This script runs `docker-compose down`, rebuilds the services with `--no-cache`, brings everything up detached, and streams the latest logs so you can verify startup.
-
-## CI/CD & Docker Hub
-
-GitHub Actions (`.github/workflows/test.yml`) now:
-
-1. Boots a PostgreSQL service
-2. Installs dependencies + Playwright browsers
-3. Runs unit, integration, and E2E suites (pytest)
-4. Builds a Docker image and scans it with Trivy
-5. Pushes multi-arch image to Docker Hub as `solaimon/module14_is601:latest` and `solaimon/module14_is601:${{ github.sha }}` when `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN` secrets are provided and the `main` branch is updated
-
-Verify the workflow run and Docker Hub tags via the GitHub Actions logs/history for grading artifacts.
-Browse the pushed image on Docker Hub: https://hub.docker.com/r/solaimon/module14_is601.
-
-## Reflection / Follow-up
-
-- See `REFLECTION.md` for prompts you can expand on before submission.
-- Update the `docs/` directory if you extend the feature set beyond the base assignment.
+Use `docker compose ps` to verify the `valorant-app` container is bound to port 9000 and `docker compose logs valorant-app` if you need debugging details.

@@ -1,0 +1,75 @@
+{% extends "layout.html" %}
+
+{% block title %}Valorant Tactical Dashboard{% endblock %}
+
+{% block content %}
+<section class="space-y-10">
+  <div class="glass-panel">
+    <p class="text-xs uppercase tracking-[0.6em] text-red-300">Valorant Coach</p>
+    <h1 class="text-4xl font-black text-white">Valorant Tactical Coach Dashboard</h1>
+    <p class="dashboard-note">Command your roster with real-time intel, persona-aware briefings, and a live heat map.</p>
+  </div>
+
+  <div class="dashboard-grid">
+    <article class="dashboard-panel">
+      <div class="panel-heading">
+        <h2>Coach Personas</h2>
+      </div>
+      <div class="grid gap-4">
+        <div class="match-card">
+          <p class="text-sm uppercase tracking-[0.3em] text-gray-400">Strict Coach</p>
+          <p class="match-notes">Sharp shot-calling, analytics-first, pushes teams to discipline.</p>
+        </div>
+        <div class="match-card">
+          <p class="text-sm uppercase tracking-[0.3em] text-gray-400">Chill Friend</p>
+          <p class="match-notes">Keeps the mood light, provides encouragement, perfect for low-pressure practices.</p>
+        </div>
+        <div class="match-card">
+          <p class="text-sm uppercase tracking-[0.3em] text-gray-400">Esports Analyst</p>
+          <p class="match-notes">Studies pro playbooks, offers post-match breakdowns, and highlights meta shifts.</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="dashboard-panel">
+      <div class="panel-heading">
+        <h2>Performance Metrics</h2>
+      </div>
+      <div class="dashboard-grid">
+        <div class="match-card">
+          <p class="match-score">57%</p>
+          <p class="match-notes">Win Rate</p>
+        </div>
+        <div class="match-card">
+          <p class="match-score">1.36</p>
+          <p class="match-notes">Avg K/D Ratio</p>
+        </div>
+        <div class="match-card">
+          <p class="match-score">42%</p>
+          <p class="match-notes">Headshot %</p>
+        </div>
+        <div class="match-card">
+          <p class="match-score">Immortal I</p>
+          <p class="match-notes">Current Rank</p>
+        </div>
+      </div>
+    </article>
+  </div>
+
+  <div class="dashboard-panel">
+    <div class="panel-heading">
+      <h2>Tactical Heat Map</h2>
+      <span class="stat-chip">Live</span>
+    </div>
+    <div class="empty-state" style="min-height: 260px;">Heat map placeholder – integrate map overlays or third-party widgets here.</div>
+  </div>
+
+  <div class="glass-panel flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <div>
+      <p class="text-sm uppercase tracking-[0.4em] text-gray-300">Need more insight?</p>
+      <h3 class="text-2xl font-bold">Connect your match data and live logs</h3>
+    </div>
+    <a href="{{ request.url_for('dashboard_view') }}" class="btn btn-primary">Back to My Dashboard</a>
+  </div>
+</section>
+{% endblock %}

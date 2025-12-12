@@ -1,2 +1,2 @@
-// Your JavaScript code can go here.
-console.log("JavaScript loaded!");
+// Placeholder for future Valorant Coach interactions
+console.log('Valorant Coach scripts ready');
