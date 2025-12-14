@@ -2,8 +2,8 @@
 from functools import lru_cache
 from typing import List
 
+from pydantic import Extra, Field, PostgresDsn
 from pydantic_settings import BaseSettings
-from pydantic import Field, PostgresDsn
 
 
 class Settings(BaseSettings):
@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = Extra.ignore
 
 
 @lru_cache()
